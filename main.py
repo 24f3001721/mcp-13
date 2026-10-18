@@ -1,30 +1,30 @@
 import hashlib
-import os
+
 from fastmcp import FastMCP
-from starlette.requests import Request
+from fastmcp.server.dependencies import get_http_request
 
 mcp = FastMCP("Exam Challenge Server")
 
 NORMALIZED_EMAIL = "24f3001721@ds.study.iitm.ac.in"
 
 
-@mcp.tool()
+@mcp.tool(name="solve_challenge")
 def solve_challenge() -> str:
-    """Solve the current exam challenge using its HTTP request headers."""
-    request = mcp.get_context().get_http_request()
+    """Return the challenge hash from the current HTTP request headers."""
 
+    request = get_http_request()
     challenge = request.headers.get("X-Exam-Challenge", "")
 
     if len(challenge) != 32:
-        raise ValueError("Missing or invalid challenge header")
+        raise ValueError("Invalid X-Exam-Challenge header")
 
     if any(c not in "0123456789abcdef" for c in challenge):
         raise ValueError("Challenge must be lowercase hexadecimal")
 
-    value = f"{challenge}:{NORMALIZED_EMAIL}"
-    result = hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+    message = f"{challenge}:{NORMALIZED_EMAIL}"
+    digest = hashlib.sha256(message.encode("utf-8")).hexdigest()
 
-    return result
+    return digest[:16]
 
 
 app = mcp.http_app(path="/mcp")
